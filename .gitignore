@@ -1,0 +1,22 @@
+# --- macOS 卷元数据 ---
+/.Spotlight-V100
+/.Trashes
+/.fseventsd
+/.TemporaryItems
+/.DocumentRevisions-V100
+.apdisk
+
+# --- macOS 文件垃圾 ---
+**/._*
+**/.DS_Store
+**/.contentFlavour
+**/.contentVisibility
+
+# --- 傲梅分区助手日志 ---
+/AomeiPartAssistantPE
+
+# --- OpenCore 运行日志 ---
+/opencore-*.txt
+
+# --- config 本地备份（git 历史本身就是备份；想纳入版本控制就删掉下面这行）---
+EFI/OC/config.plist.bak*
