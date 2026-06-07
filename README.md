@@ -18,7 +18,7 @@
 | 存储 2 | SOLIDIGM SSDPFKKW020X7 2TB NVMe | ✅ |
 | 声卡 | Realtek **ALC897**（板载）| ✅ alcid=11 |
 | 有线网卡 | Realtek **RTL8125** 2.5GbE（板载）| ✅ en0 |
-| 无线网卡 | **BCM94360CD**（Fenvi T919，PCIe）| ⚠️ Tahoe 下需 OCLP-Mod root patch（见下）|
+| 无线网卡 | **BCM94360CD**（Fenvi T919，PCIe）| ❌ 26.5.1 实测不可用（其他版本未测，见下）|
 | 蓝牙 | **BCM20702B0**（网卡自带，USB）| ✅ 原生免驱 |
 | USB-C | 1× USB 3.2 **Gen 2×2（20Gbps）** | 非雷雳；macOS 限 10Gbps（见下）|
 | SMBIOS | MacPro7,1 | - |
@@ -38,8 +38,8 @@
 | USB 端口映射 | ✅ |
 | OTA 软件更新 | ✅（revpatch=sbvmm）|
 | iMessage / FaceTime | ✅（需生成有效序列号）|
-| **WiFi** | ⚠️ Tahoe 下需 OCLP-Mod root patch（默认不工作）|
-| **AirDrop / 随航 / 接力** | ⚠️ 依赖 WiFi 的 AWDL，WiFi 恢复后才可用 |
+| **WiFi** | ❌ 26.5.1 实测不可用（其他版本未测，见下）|
+| **AirDrop / 随航 / 接力** | ❌ 依赖 WiFi，WiFi 不可用时同样不可用 |
 | **USB 20Gbps** | ⚠️ macOS 不支持 Gen 2×2，最高 10Gbps |
 
 ---
@@ -138,17 +138,13 @@ cp -R release /Volumes/ESP/EFI                # 日常用 RELEASE
 
 ---
 
-## ⚠️ WiFi / AirDrop 恢复（Tahoe）
+## ⚠️ WiFi / AirDrop（Tahoe，当前不可用）
 
-macOS 26 Tahoe 移除了对 BCM4360/BCM94360CD 旧博通网卡的原生驱动，**WiFi 默认不工作**。需用 **OCLP-Mod（laobamac fork，3.1.0+）** 的 root patch 注入旧驱动恢复。
+macOS 26 Tahoe 移除了 BCM4360/BCM94360CD 旧博通网卡的原生驱动。理论上靠 OCLP-Mod 注入旧驱动（`IO80211FamilyLegacy` / `IOSkywalkFamily`，Ventura 版）+ root patch 恢复。
 
-**前置条件（本 EFI 已全部满足）**：SecureBootModel=Disabled · csr=0x0803 · AMFIPass 1.4.1 · boot-args 含 `amfi=0x80` · 已 Block `IOSkywalkFamily`。
+**实测结论（2026-06，build 25F80）：当前 26.5.1 不可用。** 注入上述 kext 后开机**瞬间重启**（early kernel panic）——OpenCore 注入全部成功，崩在内核加载阶段。原因是这些 Apple 私有 kext 与 Tahoe 内核 **ABI 不兼容**（`IOSkywalkFamily` 在 Sequoia→Tahoe 改了运行时 ABI），**非配置可解**，需等 dortania / OCLP-Mod 出 Tahoe 适配版（注入 kext 版本号至今未动）。**其他 Tahoe 版本未测试。**
 
-**步骤**：
-1. 进系统打开 **OCLP-Mod** → Build/Install OpenCore（让它注入 WiFi kext）
-2. OC 菜单 **Reset NVRAM**
-3. OCLP-Mod → **Post-Install Root Patch → Start Root Patching** → 重启
-4. **每次 macOS 更新后需重新打 root patch**
+> 当前只能用有线（RTL8125），或换一张 Tahoe 原生支持的网卡。
 
 ---
 
@@ -176,7 +172,7 @@ macOS 26 Tahoe 移除了对 BCM4360/BCM94360CD 旧博通网卡的原生驱动，
 ## 故障排查
 
 - **启动黑屏/卡住**：改用 `debug/` 版（或临时加 `-v`）看日志；关注 GPU(`EXITBS`) / 显示驱动(`IOConsoleUsers`) 卡点。
-- **WiFi 扫不到**：确认已跑 OCLP-Mod root patch（更新后需重跑），且 AMFIPass / 注入的 WiFi kext 生效。
+- **WiFi 扫不到**：当前 26.5.1 不可用（注入即 panic），详见「WiFi / AirDrop」。
 - **有线不通**：确认 `LucyRTL8125Ethernet.kext` 启用。
 - **Win/Mac 时间不同步**（双系统）：Windows 管理员运行
   `reg add "HKLM\System\CurrentControlSet\Control\TimeZoneInformation" /v RealTimeIsUniversal /d 1 /t REG_DWORD /f`
@@ -203,4 +199,4 @@ macOS 26 Tahoe 移除了对 BCM4360/BCM94360CD 旧博通网卡的原生驱动，
 - `Misc→Debug→Target=0`；`Timeout=5`；启动主题 `Acidanthera\GoldenGate`
 - 声卡 ALC897（alcid=11）；USB 映射 USBToolBox + UTBMap；板载 Realtek 无线已禁用，改用博通 Fenvi
 - 仓库分 `release/` + `debug/` 两套完整 EFI
-- ⚠️ WiFi 需用 OCLP-Mod 在 Tahoe 上 root patch 恢复
+- ❌ WiFi 当前 26.5.1 不可用（注入即 panic，其他版本未测）
